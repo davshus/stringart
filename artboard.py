@@ -30,6 +30,28 @@ class Artboard:
         angle_delta = 2 * math.pi / self.n_pins
         return pin * angle_delta + math.pi / 2 # Moves counterclockwise
 
+    def _get_point(self, pin):
+        angle = self._pin_angle_(pin)
+        radius = self.diameter / 2.0
+        return (radius * math.cos(angle), radius * math.sin(angle))
+
+    def _get_length(self, startPin, endPin):
+        startPoint = self._get_point(startPin)
+        endPoint = self._get_point(endPin)
+        return ((startPoint[0] - endPoint[0])**2 + (startPoint[1] - endPoint[1])**2) ** 0.5
+
+    def total_length(self):
+        totalLen = 0.0
+        for i in range(self.n_pins - 1, 0, -1):
+            for j in range(0, i):
+                if self.state[i][j] is None:
+                    continue
+                totalLen += self._get_length(i, j)
+        # converting from millimteres to inches
+        totalInches = totalLen * 0.0393701
+        totalFeet = totalInches / 12.0
+        return totalFeet
+
     def render(self, dpi=96, background=None):
         # TODO: implement polyline
         d = draw.Drawing(self.diameter, self.diameter, origin='center')
@@ -42,10 +64,9 @@ class Artboard:
                 if self.state[i][j] is None:
                     continue
                 yarn = self.state[i][j]
-                theta_end = self._pin_angle_(i)
-                theta_start = self._pin_angle_(j)
-                d.append(draw.Line(radius * math.cos(theta_start), radius * math.sin(theta_start),
-                                   radius * math.cos(theta_end), radius * math.sin(theta_end), stroke_width=yarn.width,
-                                   stroke=yarn.color, stroke_opacity=0.6, fill='none'))
+                endPoint = self._get_point(i)
+                startPoint = self._get_point(j)
+                d.append(draw.Line(startPoint[0], startPoint[1], endPoint[0], endPoint[1], 
+                    stroke_width=yarn.width, stroke=yarn.color, stroke_opacity=0.6, fill='none'))
         d.setPixelScale(dpi * 0.393701 / 10)
         return d
