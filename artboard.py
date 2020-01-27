@@ -16,6 +16,9 @@ class Artboard:
         self.current_yarn = yarn
         self.state = [[None] * i for i in range(0, pins_n)]
 
+    def reset(self):
+        self.state = [[None] * i for i in range(0, self.n_pins)]
+
     def add_string(self, a, b):
         if a == b:
             return False  # TODO: throw?
