@@ -20,7 +20,7 @@ class Artboard:
         self.state = [[[] for j in range(i)] for i in range(pins_n)]
 
     def reset(self):
-        self.state = [[None] * i for i in range(0, self.n_pins)]
+        self.state = [[[] for j in range(i)] for i in range(self.n_pins)]
 
     def add_string(self, a, b):
         if a == b:
