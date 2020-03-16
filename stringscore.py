@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[5]:
+# In[11]:
 
 
 # import cv2
@@ -15,8 +15,8 @@ import scipy.sparse.linalg
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from artboard import Artboard, Yarn
-N_PINS=500
-N_STRINGS = 1500
+N_PINS=200
+N_STRINGS = 1000
 DIAMETER=304.8
 DIMENSION = 500
 FADE = 25
@@ -31,20 +31,26 @@ plt.imshow(img, cmap="gray")
 plt.colorbar()
 
 
-# In[6]:
+# In[12]:
 
 
-board.generate_stringscape(img, N_STRINGS, 25, 25)
+board.setup_image(img)
 
 
-# In[7]:
+# In[13]:
 
 
-board.render(background="white").rasterize().savePng("build/export.png")
+board.generate_stringscape(N_STRINGS, 25, 25)
 
 
-# In[8]:
+# In[14]:
+
+
+board.render(background="white").rasterize()
+
+
+# In[16]:
 
 
 plt.imshow(img, cmap="gray")
-plt.show()
+

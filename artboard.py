@@ -1,8 +1,42 @@
 import math
 import random
+from collections.abc import MutableMapping
+import copy
 
 import drawSvg as draw
 
+def circular_range(start, stop, modulo, step=1): # Only supports step of 1 or -1
+    start = start % modulo
+    stop = stop % modulo
+    index = start
+    step = -1 if step < 0 else 1
+    while index != stop:
+        yield index
+        index = (index + step) % modulo
+
+class PinPairMap(MutableMapping):
+    def __init__(self, arg=None):
+        self._map = {}
+        if arg is not None:
+            self.update(arg)
+
+    def __getitem__(self, key):
+        return self._map[frozenset(key)]
+
+    def __setitem__(self, key, value):
+        self._map[frozenset(key)] = value
+
+    def __delitem__(self, key):
+        del self._map[frozenset(key)]
+
+    def __iter__(self):
+        return iter(self._map)
+
+    def __len__(self):
+        return len(self._map)
+
+    def __repr__(self):
+        return repr(self._map)
 
 class Point:
     # (x, y)
@@ -16,7 +50,7 @@ class Point:
     def __add__(self, other):
         return Point(self.x + other.x, self.y + other.y)
 
-    def __neg__(self, other):
+    def __neg__(self):
         return Point(-self.x, -self.y)
 
     def __sub__(self, other):
@@ -30,6 +64,12 @@ class Point:
 
     def copy(self):
         return Point(self.x, self.y)
+
+    def __mul__(self, other):
+        return self.x * other.x + self.y * other.y
+
+    def __abs__(self):
+        return (self.x ** 2 + self.y ** 2) ** 0.5
 
 class Scoring:
     @staticmethod
@@ -56,7 +96,7 @@ class Artboard:
         self.n_pins = pins_n
         self.current_yarn = yarn
         self.n_combinations = self.n_pins ** 2 - self.n_pins / 2.0 * (self.n_pins + 1)
-        self.line_pixels = {}
+        self.line_pixels = PinPairMap()
         self.state = [[[] for j in range(i)] for i in range(pins_n)]
 
     def reset(self):
@@ -110,7 +150,7 @@ class Artboard:
                 rowStr += f"{yarnStr}   "
             print(rowStr)
 
-    def scape_next_pin(self, current, img, min_distance, score_func):
+    def scape_next_pin(self, current, img, min_distance):
         max_score = 0
         next = -1
         for i in range(self.n_pins):
@@ -127,8 +167,8 @@ class Artboard:
             if len(self.state[pair[0]][pair[1]]) > 0:
                 continue
 
-            score = score_func(img, self.line_pixels[pair])
-            if score > max_score:
+            score = self.scores[pair]
+            if i == 0 or score > max_score:
                 max_score = score
                 next = i
 
@@ -184,41 +224,54 @@ class Artboard:
             pins.append(Point(x, y))
         return pins
 
-    def generate_stringscape(self, img, n_strings, fade, min_distance, scoring_method=Scoring.naive):
-        # origin top left, (y, x)
-        steps = []
-        current = 0 # change to darkest point on border?
-        steps.append(current)
-
+    def setup_image(self, img, scoring_method = Scoring.naive):
         ydim = img.shape[0]
         xdim = img.shape[1]
+        self.img = img
         self.grid = [
             [
-                Point(j,i) for j in range(0, xdim)
+                Point(j, i) for j in range(0, xdim)
             ] for i in range(0, ydim)
         ]
         radius = min(xdim, ydim) // 2
-        circle_pins = self.calc_img_circle_pins(self.n_pins, Point(xdim / 2, ydim / 2), radius, x_max=xdim-1, x_min=0, y_max=ydim-1, y_min=0, flip_y=True)
-        print(circle_pins)
-        # move this to __init__?
+        self.circle_pins = self.calc_img_circle_pins(self.n_pins, Point(xdim / 2, ydim / 2), radius, x_max=xdim-1, x_min=0, y_max=ydim-1, y_min=0, flip_y=True)
+        self.scores = PinPairMap()
         for i in range(0, self.n_pins):
-            print(f"Circle pin {i}")
             for j in range(i + 1, self.n_pins):
-                self.line_pixels[(j, i)] = self.rasterize_line(circle_pins[i], circle_pins[j])
+                self.line_pixels[j, i] = self.rasterize_line(self.circle_pins[i], self.circle_pins[j])
+                self.scores[j, i] = scoring_method(img, self.line_pixels[j, i])
+        print(self.scores)
 
+    def generate_stringscape(self, n_strings, fade, min_distance):
+        # PRECONDITION: run setup_image
+        # origin top left, (y, x)
+        current = 0
+        old_scores = copy.deepcopy(self.scores)
         for i in range(0, n_strings):
-            next = self.scape_next_pin(current, img, min_distance, scoring_method)
+            next = self.scape_next_pin(current, self.img, min_distance)
             self.add_string(next, current)
-            print (f"{i}/{n_strings}: {current} -> {next}")
+            # print (f"{i}/{n_strings}: {current} -> {next}")
             if next < 0:
                 print("No more possible strings!")
                 break
-
-            # look into this
-            pair = (max(next, current), min(next, current))
-            self.reduce_line(img, self.line_pixels[pair], fade)  # is this necessary?
+            string_vec = self.circle_pins[current] - self.circle_pins[next]
+            # Reduce the lines based on fade constant and dot product
+            for a in circular_range(next + 1, current, self.n_pins):
+                for b in circular_range(current + 1, next, self.n_pins):
+                    # print(a, b)
+                    possible_vec = self.circle_pins[a] - self.circle_pins[b]
+                    alignment = (string_vec * possible_vec) / (abs(string_vec) * abs(possible_vec))
+                    # print(alignment * fade / 350)
+                    self.scores[a, b] = self.scores[a, b] - abs(alignment * fade / len(self.line_pixels[a, b])) # magic number approximately equal to 500 * sqrt(2)
 
             current = next
+        delta_scores = PinPairMap()
+        for key in self.scores:
+            delta_scores[key] = self.scores[key] - old_scores[key]
+
+        # print(f"OLD: {old_scores}")
+        # print(f"NEW: {self.scores}")
+        # print(f"DEL: {delta_scores}")
         return self
 
     def render(self, dpi=96, background=None):
