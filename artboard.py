@@ -1,5 +1,6 @@
 import math
 import random
+from tqdm import tqdm
 
 import drawSvg as draw
 
@@ -201,15 +202,15 @@ class Artboard:
         circle_pins = self.calc_img_circle_pins(self.n_pins, Point(xdim / 2, ydim / 2), radius, x_max=xdim-1, x_min=0, y_max=ydim-1, y_min=0, flip_y=True)
         print(circle_pins)
         # move this to __init__?
-        for i in range(0, self.n_pins):
-            print(f"Circle pin {i}")
+        for i in tqdm(range(0, self.n_pins)):
+            #print(f"Circle pin {i}")
             for j in range(i + 1, self.n_pins):
                 self.line_pixels[(j, i)] = self.rasterize_line(circle_pins[i], circle_pins[j])
 
-        for i in range(0, n_strings):
+        for i in tqdm(range(0, n_strings)):
             next = self.scape_next_pin(current, img, min_distance, scoring_method)
             self.add_string(next, current)
-            print (f"{i}/{n_strings}: {current} -> {next}")
+            #print (f"{i}/{n_strings}: {current} -> {next}")
             if next < 0:
                 print("No more possible strings!")
                 break
