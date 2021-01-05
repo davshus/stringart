@@ -38,7 +38,7 @@ class Scoring:
         score = 0
         for p in points:
             c = img[p.y][p.x] & 0xff
-            score += 0xff - c
+            score += (0xff - c)
         return score / len(points)
 
 
@@ -185,6 +185,28 @@ class Artboard:
             pins.append(Point(x, y))
         return pins
 
+    def print_scores(self, img, scoring_method=Scoring.naive):
+        steps = []
+        current = 0 # change to darkest point on border?
+        steps.append(current)
+
+        ydim = img.shape[0]
+        xdim = img.shape[1]
+        self.grid = [
+            [
+                Point(j,i) for j in range(0, xdim)
+            ] for i in range(0, ydim)
+        ]
+        radius = min(xdim, ydim) // 2
+        circle_pins = self.calc_img_circle_pins(self.n_pins, Point(xdim / 2, ydim / 2), radius, x_max=xdim-1, x_min=0, y_max=ydim-1, y_min=0, flip_y=True)
+        for i in range(0, self.n_pins):
+            #print(f"Circle pin {i}")
+            for j in range(i + 1, self.n_pins):
+                self.line_pixels[(j, i)] = self.rasterize_line(circle_pins[i], circle_pins[j])
+                coord1 = (i+self.n_pins//2) % self.n_pins
+                coord2 = (j+self.n_pins//2) % self.n_pins
+                print(f"{min(coord1,coord2)}-{max(coord1,coord2)} ... {str(scoring_method(img, self.line_pixels[(j,i)]))[:7]}")
+
     def generate_stringscape(self, img, n_strings, fade, min_distance, scoring_method=Scoring.naive):
         # origin top left, (y, x)
         steps = []
@@ -236,6 +258,6 @@ class Artboard:
                     endPoint = self._get_point(i)
                     startPoint = self._get_point(j)
                     d.append(draw.Line(startPoint.x, startPoint.y, endPoint.x, endPoint.y, stroke_width=yarn.width,
-                                       stroke=yarn.color, stroke_opacity=0.4, fill='none'))
+                                       stroke=yarn.color, stroke_opacity=1, fill='none'))
         d.setPixelScale(dpi * 0.393701 / 10)
         return d

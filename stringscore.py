@@ -15,16 +15,16 @@ import scipy.sparse.linalg
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from artboard import Artboard, Yarn
-N_PINS=500
-N_STRINGS = 1500
+N_PINS=180
+N_STRINGS = 3000
 DIAMETER=304.8
 DIMENSION = 500
-FADE = 25
-FILE = 'img/wolf.jpg'
+FADE = 50
+FILE = 'fdr.jpg'
 board = Artboard(DIAMETER, N_PINS)
 
 #random 500x500 image
-img = np.array(Image.open(FILE))
+img = np.array(Image.open(f"img/{FILE}"))
 if img.ndim > 2:
     img = img[:, :, 0] #flatten to 1 channel - in prod, will need to loop over all channels
 plt.imshow(img, cmap="gray")
@@ -34,13 +34,13 @@ plt.colorbar()
 # In[6]:
 
 
-board.generate_stringscape(img, N_STRINGS, 25, 25)
+board.generate_stringscape(img, N_STRINGS, FADE, 25)
 
 
 # In[7]:
 
 
-board.render(background="white").rasterize().savePng("build/export.png")
+board.render(background="white").rasterize().savePng(f"build/{FILE}-{N_PINS}-{N_STRINGS}-{FADE}-naive.png")
 
 
 # In[8]:
