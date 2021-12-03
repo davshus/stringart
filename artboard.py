@@ -72,7 +72,7 @@ class Artboard:
         if a == b:
             return False  # TODO: throw?
         if len(self.state[max(a, b)][min(a, b)]) > index:
-            del asdf[index]
+            del self.state[max(a, b)][min(a, b)][index]
 
     def _pin_angle_(self, pin):
         angle_delta = 2 * math.pi / self.n_pins
