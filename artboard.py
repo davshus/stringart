@@ -221,14 +221,15 @@ class Artboard:
             current = next
         return self
 
-    def render(self, dpi=96, background=None):
+    def render(self, dpi=96, frame='black', background=None):
         # self.printState()
         # TODO: implement polyline
         d = draw.Drawing(self.diameter, self.diameter, origin='center')
         radius = self.diameter / 2.0
         if background is not None:
             d.append(draw.Rectangle(-radius, -radius, self.diameter, self.diameter, fill=background))
-        d.append(draw.Circle(0, 0, radius, stroke='black', stroke_width=5, stroke_opacity=1, fill='none'))
+        if frame is not None:
+            d.append(draw.Circle(0, 0, radius, stroke=frame, stroke_width=5, stroke_opacity=1, fill='none'))
         for i in range(self.n_pins - 1, 0, -1):
             for j in range(0, i):
                 for yarn in self.state[i][j]:
